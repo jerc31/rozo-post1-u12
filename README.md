@@ -60,13 +60,13 @@ Antes de ejecutar el proyecto, asegúrate de tener:
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
-    
+
     <!-- Actuator para healthchecks -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
-    
+
     <!-- Controladores de Base de Datos -->
     <dependency>
         <groupId>org.postgresql</groupId>
@@ -77,6 +77,7 @@ Antes de ejecutar el proyecto, asegúrate de tener:
 ```
 
 **Arquitectura del Proyecto**
+
 ```text
  post1/
    ├── Dockerfile
@@ -129,21 +130,25 @@ Centraliza la inyección de variables sensibles.
 ## Ejecución del Proyecto
 
 1. Clonar repositorio:
+
 ```bash
 git clone https://github.com/jerc31/rozo-post1-u12.git
 ```
 
 2. Abrir terminal en la carpeta raíz y construir:
+
 ```bash
 docker compose up -d --build
 ```
 
 3. Verificar que los contenedores están `healthy`:
+
 ```bash
 docker compose ps
 ```
 
 4. Probar flujo completo:
+
 - Llama a `http://localhost:8080/actuator/health`.
 - Crea un producto haciendo un POST a `http://localhost:8080/api/productos`.
 
@@ -154,19 +159,23 @@ docker compose ps
 ✓ **Checkpoint 1: Construcción Optimizada**
 
 Comandos usados:
+
 ```bash
 docker build -t mi-app:local .
 docker images
 ```
-*Se verifica que la imagen compila y pesa menos de 300MB.*
+
+_Se verifica que la imagen compila y pesa menos de 300MB._
 
 ✓ **Checkpoint 2: Orquestación Local**
 
 Se levanta con Docker Compose y se verifica:
+
 ```bash
 curl http://localhost:8080/actuator/health
 ```
-*Retorna `{"status":"UP"}` con conexión a Postgres.*
+
+_Retorna `{"status":"UP"}` con conexión a Postgres._
 
 ✓ **Checkpoint 3: Despliegue en Railway**
 
@@ -195,19 +204,28 @@ curl http://localhost:8080/actuator/health
 
 ## Capturas del Proyecto
 
-Las siguientes evidencias se encuentran en la carpeta `/evidencias/` o en el PDF del informe:
+Las siguientes capturas se encuentran en la carpeta `/evidencias/`
 
-### Archivo Dockerfile Construido (Tamaño optimizado)
-![Captura Docker Build](evidencias/captura_docker_build.png)
+### Archivo Dockerfile Construido
 
-### Docker Compose Saludable
-![Captura Compose PS](evidencias/captura_compose_ps.png)
+![docker_image](evidencias/captura_docker_image.png)
 
-### Panel de Railway y Despliegue
-![Captura Railway Panel](evidencias/captura_railway_panel.png)
+### Docker Compose
 
-### Endpoint Actuator / Health
-![Captura Actuator](evidencias/captura_actuator_health.png)
+![Compose](evidencias/captura_docker_compose_up.png)
 
-### Endpoints REST Funcionando
-![Captura Endpoints](evidencias/captura_endpoints_rest.png)
+### Railway Despliegue
+
+![Railway](evidencias/captura_railway_app.png)
+
+### Panel Railway
+
+![panel_railway](evidencias/captura_panel_railway.png)
+
+### Endopoint crear producto
+
+![post](evidencias/captura_crear_producto.png)
+
+### Endpoint obtener producto por id
+
+![get](evidencias/captura_get_productos.png)
