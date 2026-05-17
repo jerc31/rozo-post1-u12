@@ -1,4 +1,4 @@
-# Despliegue y CI/CD en Railway
+# Módulo de Contenedorización y Despliegue en Spring Boot
 
 ## Autor
 
@@ -13,26 +13,26 @@
 
 ## Descripción del Proyecto
 
-Este proyecto implementa la contenedorización de una aplicación Spring Boot mediante Docker y su orquestación local con Docker Compose. Adicionalmente, el proyecto se despliega en producción utilizando la plataforma Railway con una base de datos PostgreSQL.
+Este proyecto implementa la contenedorización y orquestación local de una aplicación Spring Boot para un sistema de gestión de productos.
 
-Se integran mecanismos de despliegue modernos como:
+Se integran mecanismos modernos de despliegue como:
 
-- **Dockerfile Multi-Stage** para optimizar el tamaño de la imagen.
-- **Docker Compose** para orquestar la app y PostgreSQL en entorno local.
-- **Railway** para el despliegue público y aprovisionamiento automático de base de datos.
+- Dockerfile Multi-Stage para optimizar el tamaño de las imágenes.
+- Docker Compose para orquestar la aplicación junto a PostgreSQL.
+- Railway para el aprovisionamiento en la nube y despliegue continuo.
 
-El objetivo es garantizar un ambiente de producción consistente y automatizar el proceso de construcción.
+El objetivo es garantizar que la aplicación funcione de manera consistente en desarrollo y en producción, asegurando que la base de datos se despliegue de forma automática con las variables de entorno correctas.
 
 ---
 
 ## Objetivo
 
-Implementar un sistema de despliegue que permita:
+Implementar un sistema de contenedorización que permita:
 
-- Separar el entorno de construcción (JDK) del de ejecución (JRE).
-- Configurar variables de entorno y perfiles para producción.
-- Ejecutar la aplicación de forma local con Docker Compose junto a una base de datos PostgreSQL real.
-- Desplegar la aplicación y la base de datos en Railway con endpoints públicos.
+- Crear imágenes Docker eficientes y seguras.
+- Orquestar la aplicación localmente simulando el entorno de producción.
+- Verificar el estado de salud de los servicios con Actuator.
+- Desplegar la API REST en la plataforma Railway.
 
 ---
 
@@ -41,97 +41,173 @@ Implementar un sistema de despliegue que permita:
 Antes de ejecutar el proyecto, asegúrate de tener:
 
 - Docker Desktop instalado y en ejecución.
-- Maven 3.8+ o utilizar el wrapper incluido (`mvnw`).
-- Cuenta gratuita en Railway (railway.app) vinculada a GitHub.
-- JDK 21 (opcional para pruebas locales sin Docker).
+- JDK 21+ instalado en caso de querer compilar localmente (opcional).
+- Maven 3.8+ o utilizar el `mvnw` incluido.
+- Cuenta gratuita en Railway (railway.app) conectada a GitHub.
 
 ---
 
-## Estructura del Proyecto
+## Dependencias
 
-```text
-/
-├── .mvn/                   # Maven Wrapper
-├── src/                    # Código fuente Spring Boot
-│   ├── main/java/...       # Controladores, Entidades, Repositorios
-│   └── main/resources/     # application.properties, application-prod.properties
-├── Dockerfile              # Configuración Multi-Stage
-├── .dockerignore           # Exclusiones de Docker
-├── docker-compose.yml      # Orquestación local (App + PostgreSQL)
-└── pom.xml                 # Dependencias Maven
+```xml
+<dependencies>
+    <!-- Dependencias de Spring Boot Web y JPA -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+    
+    <!-- Actuator para healthchecks -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    
+    <!-- Controladores de Base de Datos -->
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <scope>runtime</scope>
+    </dependency>
+</dependencies>
 ```
 
-## Funciones principales (Endpoints):
+**Arquitectura del Proyecto**
+```text
+ post1/
+   ├── Dockerfile
+   ├── docker-compose.yml
+   ├── .dockerignore
+   └── src/
+       └── main/
+           ├── java/com/ejemplo/app/
+           │   ├── controller/ProductoController.java
+           │   ├── model/Producto.java
+           │   └── repository/ProductoRepository.java
+           └── resources/
+               ├── application.properties
+               └── application-prod.properties
+```
 
-- `GET /api/productos` → Retorna la lista de productos
-- `POST /api/productos` → Crea un nuevo producto
-- `GET /actuator/health` → Verifica la salud de la aplicación y conexión a DB
+## Funciones principales:
+
+- `getAllProductos()` → Recupera todos los productos de la BD.
+- `createProducto()` → Almacena un producto nuevo.
+- `/actuator/health` → Verifica estado de conexión de BD.
 
 ---
 
-## Componentes de Despliegue
+## Componentes de Despliegue y Arquitectura
 
 ### 1. Dockerfile Multi-Stage
 
-- **Decisión de diseño:**
-  Se usa `eclipse-temurin:21-jdk-alpine` para la compilación aprovechando la caché de Maven y `eclipse-temurin:21-jre-alpine` para producción. Esto reduce drásticamente el tamaño de la imagen final (menos de 300MB) y elimina herramientas innecesarias en el contenedor de producción. Además, se ejecuta con el usuario no root `spring` por motivos de seguridad.
-
-### 2. Docker Compose
+Archivo que compila la imagen en dos fases separadas (Builder y JRE).
 
 - **Decisión de diseño:**
-  Se define la base de datos PostgreSQL 16 con un `healthcheck` para garantizar que la app no inicie hasta que la base de datos esté lista para aceptar conexiones (`condition: service_healthy`).
+  Se usa Multi-Stage para evitar que herramientas como Maven y el código fuente residan en la imagen final de producción, dejándola en menos de 300 MB y siendo una práctica de seguridad fuerte.
 
-### 3. application-prod.properties
+### 2. Docker Compose y Healthchecks
+
+Archivo que orquesta `app` y `db` en una red aislada local.
 
 - **Decisión de diseño:**
-  Se exteriorizan las credenciales y URL de conexión usando variables de entorno (`DATABASE_URL`, `DB_USER`, `DB_PASS`) para no exponer secretos en el código fuente.
+  Se eligió el condicional `condition: service_healthy` para el contenedor de la aplicación, asegurando que Spring Boot no intente conectarse a PostgreSQL hasta que la BD esté inicializada.
+
+### 3. Perfiles de Spring Boot (`application-prod.properties`)
+
+Centraliza la inyección de variables sensibles.
+
+- **Decisión de diseño:**
+  Se exteriorizan credenciales (`${DATABASE_URL}`, `${DB_USER}`) para no subir contraseñas al repositorio y facilitar el despliegue automático en Railway.
 
 ---
 
-## Ejecución del Proyecto (Local)
+## Ejecución del Proyecto
 
 1. Clonar repositorio:
-   ```bash
-   git clone https://github.com/jerc31/rozo-post1-u12.git
-   cd rozo-post1-u12
-   ```
+```bash
+git clone https://github.com/jerc31/rozo-post1-u12.git
+```
 
-2. Ejecutar con Docker Compose:
-   ```bash
-   docker compose up -d --build
-   ```
+2. Abrir terminal en la carpeta raíz y construir:
+```bash
+docker compose up -d --build
+```
 
-3. Verificar estado:
-   ```bash
-   docker compose ps
-   ```
+3. Verificar que los contenedores están `healthy`:
+```bash
+docker compose ps
+```
 
-4. Probar endpoints:
-   - `http://localhost:8080/actuator/health`
-   - `http://localhost:8080/api/productos`
+4. Probar flujo completo:
+- Llama a `http://localhost:8080/actuator/health`.
+- Crea un producto haciendo un POST a `http://localhost:8080/api/productos`.
 
 ---
 
-## Checkpoints y Verificaciones
+## Checkpoints de Despliegue
 
-✓ **Checkpoint 1: Verificación de Dockerfile**
-- Comando: `docker build -t mi-app:local .`
-- Comando: `docker images`
-- *La imagen pesa menos de 300MB y compila sin errores.*
+✓ **Checkpoint 1: Construcción Optimizada**
+
+Comandos usados:
+```bash
+docker build -t mi-app:local .
+docker images
+```
+*Se verifica que la imagen compila y pesa menos de 300MB.*
 
 ✓ **Checkpoint 2: Orquestación Local**
-- Comando: `docker compose up -d --build`
-- *Los contenedores están Up/Healthy y el healthcheck retorna {"status":"UP"}.*
+
+Se levanta con Docker Compose y se verifica:
+```bash
+curl http://localhost:8080/actuator/health
+```
+*Retorna `{"status":"UP"}` con conexión a Postgres.*
 
 ✓ **Checkpoint 3: Despliegue en Railway**
-- *La aplicación está en Railway, conectada a PostgreSQL aprovisionado desde la nube, y las variables de entorno están correctamente configuradas.*
+
+- Acción: Repositorio conectado a Railway y Postgres aprovisionado.
+- Verificación: URL pública accesible.
 
 ---
 
-## Evidencias
+## Flujo Completo de Despliegue
 
-Las siguientes evidencias se encuentran en la carpeta `/evidencias/`:
+- Se realizan cambios de código local.
+- Se compila y testea con `docker compose` en ambiente aislado.
+- Se hace un `git push` al repositorio principal.
+- Railway detecta el cambio, construye el Dockerfile en sus servidores y despliega.
+- La aplicación de producción se conecta automáticamente a la base de datos aprovisionada por Railway.
 
-- Captura de `docker build` (tamaño de la imagen).
-- Captura de `docker compose ps` y el log del healthcheck.
-- Capturas del despliegue en el panel de Railway y endpoints funcionando públicamente.
+## Decisiones de Diseño de CI/CD
+
+✔ Uso de caché de capas en Docker (copiando `pom.xml` primero).
+✔ Usuario `non-root` en el contenedor de producción.
+✔ Uso de red aislada (`app-net`) en Docker Compose.
+✔ Healthchecks explícitos usando `pg_isready`.
+✔ Configuración condicional mediante perfil `prod`.
+
+---
+
+## Capturas del Proyecto
+
+Las siguientes evidencias se encuentran en la carpeta `/evidencias/` o en el PDF del informe:
+
+### Archivo Dockerfile Construido (Tamaño optimizado)
+![Captura Docker Build](evidencias/captura_docker_build.png)
+
+### Docker Compose Saludable
+![Captura Compose PS](evidencias/captura_compose_ps.png)
+
+### Panel de Railway y Despliegue
+![Captura Railway Panel](evidencias/captura_railway_panel.png)
+
+### Endpoint Actuator / Health
+![Captura Actuator](evidencias/captura_actuator_health.png)
+
+### Endpoints REST Funcionando
+![Captura Endpoints](evidencias/captura_endpoints_rest.png)
