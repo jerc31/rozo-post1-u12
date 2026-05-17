@@ -15,7 +15,8 @@ RUN ./mvnw clean package -DskipTests -q || mvn clean package -DskipTests -q
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 
-# Usuario no root: buena práctica de seguridad en contenedores
+# Configurar usuario no root para mejorar la seguridad del contenedor en producción
+# Se crea un grupo y un usuario llamado 'spring'
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring
 
